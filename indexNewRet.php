@@ -14,10 +14,8 @@
             $nomeGeral = $i;
     }
 
-
     # Inicializando a variável $_POST['cnpj']
     $_POST['cnpj'] = isset($_POST['cnpj']) ? $_POST['cnpj'] : null;
-
 
 ?>
 
@@ -56,7 +54,7 @@ while($arquivo = $diretorio -> read()){
     //echo 'Leitura do arquivo de entrada  - '.$path.$arquivo.'<br /><br />';
 
     //processar apenas os arquivos data - resumo
-    if(str_starts_with($arquivo, 'data')) {
+    if(str_starts_with($arquivo, 'dataNew')) {
         // Abre o Arquivo no Modo r (para leitura)
 
         if(($input = fopen($path.$arquivo, 'r')) !== FALSE) {

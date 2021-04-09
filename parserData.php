@@ -1,5 +1,7 @@
 <?php
 
+	//include 'functions.php';
+
 	function parserData() {
 
 	$path = "./uploads/";
@@ -56,7 +58,7 @@
 			        if((str_starts_with($linha2 , "|C100")) && ($nota==TRUE)) {
 			            $linha1 = $linha2;    
 			        }
-			        else{
+			        else {
 			            if((str_starts_with($linha2 , "|C100")) && ($nota==FALSE)) {
 			                $nota = TRUE;
 			                $linha1 = $linha2;    
@@ -193,6 +195,8 @@
 			}
 
 			//eliminar as C100 que não o mesmo CNPJ da empresa
+			//gerar os arquivos data, com o resumo da empresa
+			
 			$input = fopen('./final/out-'.$cnpj.'-'.$data.'.txt', 'r');
 			if($input){
 				$output = fopen('./final/data-'.$cnpj.'-'.$data.'.txt', 'w');
@@ -224,7 +228,7 @@
 			    $bc_020_5117 = 0;
 			    $bc_520_5117 = 0;
 			    $bc_040_5117 = 0;
-			 
+
 			    while(!feof($input)) {
 					//se for produto de uma nota de mesmo CNPJ da empresa
 					if(str_starts_with($linha, "|C190")) {
@@ -276,12 +280,85 @@
 			    fclose($output);
 				//echo 'Arquivo data.txt gerado <br />.';
 			}
+
+
+			//array com todos os CFOP e CST que interessam
+			$cfop = array("5101", "5102", "5103", "5104", "5105", "5106", "5109", "5110", "5111", "5112", "5113", "5114", "5115", "5116", "5117", "5118", "5119", "5120", "5122", "5123", "5129", "5651", "5652", "5653", "5654", "5655", "5656", "5667", "5910", "6910", "6100", "6101", "6102", "6103", "6104", "6105", "6106", "6107", "6108", "6109", "6110", "6111", "6112", "6113", "6114", "6115", "6116", "6117", "6118", "6119", "6120", "6122", "6123", "6129", "6651", "6652", "6653", "6654", "6655", "6656", "6667");
+
+			$cst = array("020", "040", "120", "140", "220", "240", "320", "340", "420", "440", "520", "540", "620", "640", "720", "740");
+
+			$input = fopen('./final/out-'.$cnpj.'-'.$data.'.txt', 'r');
+			if($input){
+				$output = fopen('./final/dataNew-'.$cnpj.'-'.$data.'.txt', 'w');
+				// copiar a primeira linha - 0000
+			    $linha = fgets($input, 1024);
+			    //echo 'Empresa = '.$empresa.'. CNPJ = '.$cnpj.'</br>';
+			    fwrite($output, $empresa);
+			    fwrite($output, "\n");
+			    fwrite($output, $cnpj);
+			    fwrite($output, "\n");
+			    fwrite($output, $data);
+			    fwrite($output, "\n");
+
+			    // ler primeiro C100
+			    $linha = fgets($input, 1024);
+
+			    $combine = array();
+
+			    //inicializar com todas as combinações de CFOP e CST e com os valores do vetor em 0 de VC e BC
+			    foreach($cfop as $cfop_data) {
+			 		foreach ($cst as $cst_data) {
+			 			array_push($combine, array("CST" => $cst_data, "CFOP" => $cfop_data, "VC" => 0.0, "BC" => 0.0));
+			 		}
+			 	}
+
+			 	//echo var_export($combine);
+			    while(!feof($input)) {
+					//se for produto de uma nota de mesmo CNPJ da empresa
+					if(str_starts_with($linha, "|C190")) {
+			            $campos = explode('|', $linha);
+
+			            $i = 0;
+						foreach ($combine as &$notas) {
+						  if (($notas["CST"] == $campos[2]) && ($notas["CFOP"] == $campos[3])) {
+						    $notas["VC"] += floatval($campos[5]);
+						    $notas["BC"] += floatval($campos[6]);
+						  }
+						  $i++;
+						}
+
+			 	    }
+			        $linha = fgets($input, 1024);
+			    }
+			    //var_dump($combine);
+
+			    $total = 0.0;
+				foreach ($combine as &$notas) {
+					if ($notas["VC"] > 0) {
+			    		if(str_contains($notas["CST"], '20')) {
+			    			fwrite($output, '|C190|'.$notas["CST"].'|'.$notas["CFOP"].'|'.$notas["VC"].'|'.$notas["BC"].'|'.$notas["VC"]-$notas["BC"].'|17.5|'.number_format(($notas["VC"]-$notas["BC"])*0.175, 2, '.', ''));
+
+			    			$total += (($notas["VC"] - $notas["BC"])*0.175); 
+			    		}
+			    		if(str_contains($notas["CST"], '40')) {
+			    			fwrite($output, '|C190|'.$notas["CST"].'|'.$notas["CFOP"].'|'.$notas["VC"].'|'.$notas["BC"].'|'.$notas["VC"]-$notas["BC"].'|12|'.number_format(($notas["VC"]-$notas["BC"])*0.12, 2, '.', ''));
+
+			    			$total += (($notas["VC"] - $notas["BC"])*0.12); 
+			    		}
+			    		fwrite($output, "\n");
+						//var_dump($notas);
+					}
+				}
+				fwrite($output, '|Total|'.number_format($total, 2, '.', ''));
+				// Fecha arquivo aberto
+			    fclose($input);
+			    fclose($output);
+			}
 		}
 	  }
 	  $diretorio -> close();
-
 	}
 
-	//parserData();
+	parserData();
 
-	?>
+?>
